@@ -526,11 +526,14 @@ namespace RfidReader.Reader
 
                 if (dataReader.HasRows)
                 {
-                    int tari = dataReader.GetInt32("Tari");
-                    int rfModeTable = dataReader.GetInt32("RFTable");
+                    while (dataReader.Read())
+                    {
+                        int tari = dataReader.GetInt32("Tari");
+                        int rfModeTable = dataReader.GetInt32("RFTable");
 
-                    Console.WriteLine("Tari Value                  : {0} ", tari);
-                    Console.WriteLine("RF Mode Table Index         : {0} \n", rfModeTable);
+                        Console.WriteLine("Tari Value                  : {0} ", tari);
+                        Console.WriteLine("RF Mode Table Index         : {0} \n", rfModeTable);
+                    }
                     db.Con.Close();
                 }
             }
@@ -1215,93 +1218,90 @@ namespace RfidReader.Reader
                     switch (option)
                     {
                         case 1:
-                            Console.Write("\nGPI Port : ");
-
                             try
                             {
+                                Console.Write("\nGPI Port : ");
                                 gpiPort = Convert.ToInt32(Console.ReadLine());
 
-                                if (gpiPort == 0 || gpiPort > rfidReader.ReaderCapabilities.NumGPIPorts)
+                                if (gpiPort <= 0 || gpiPort > rfidReader.ReaderCapabilities.NumGPIPorts)
                                 {
                                     Console.WriteLine("Enter a valid Port in the range 1-" + rfidReader.ReaderCapabilities.NumGPIPorts);
                                     continue;
                                 }
-                            }
-                            catch (IOException)
-                            {
-                                Console.WriteLine("Enter a valid Port in the range 1-" + rfidReader.ReaderCapabilities.NumGPIPorts);
-                                continue;
-                            }
 
+                                Console.WriteLine("\nGPI Status");
+                                Console.WriteLine("1. Disable");
+                                Console.WriteLine("2. Enable");
+                                Console.Write("Option   : ");
 
-                            Console.WriteLine("\nGPI Status");
-                            Console.WriteLine("1. Disable");
-                            Console.WriteLine("2. Enable");
-                            Console.Write("Option   : ");
+                                gpiStatus = Convert.ToInt32(Console.ReadLine());
 
-                            gpiStatus = Convert.ToInt32(Console.ReadLine());
-
-                            if (gpiStatus == 1 || gpiStatus == 2)
-                            {
-                                if (gpiStatus == 1)
+                                if (gpiStatus == 1 || gpiStatus == 2)
                                 {
-                                    gpiMode = "false";
-                                    rfidReader.Config.GPI[gpiPort].Enable = false;
-
-                                    Console.WriteLine("\nGPI Port : {0} \nStatus   : Disabled", gpiPort);
-                                }
-                                else if (gpiStatus == 2)
-                                {
-                                    gpiMode = "true";
-                                    rfidReader.Config.GPI[gpiPort].Enable = true;
-
-                                    Console.WriteLine("\nGPI Port : {0} \nStatus   : Enabled", gpiPort);
-                                }
-
-                                Console.WriteLine("\nSet GPI Successfully");
-
-                                try
-                                {
-                                    MySqlDatabase db1 = new();
-                                    string selQuery = "SELECT * FROM gpi_tbl WHERE ReaderID = " + ReaderID + " AND GPIPort =" + gpiPort + "";
-                                    cmd = new MySqlCommand(selQuery, db1.Con);
-
-                                    if (db1.Con.State != ConnectionState.Open)
+                                    if (gpiStatus == 1)
                                     {
-                                        db1.Con.Open();
+                                        gpiMode = "false";
+                                        rfidReader.Config.GPI[gpiPort].Enable = false;
+
+                                        Console.WriteLine("\nGPI Port : {0} \nStatus   : Disabled", gpiPort);
+                                    }
+                                    else if (gpiStatus == 2)
+                                    {
+                                        gpiMode = "true";
+                                        rfidReader.Config.GPI[gpiPort].Enable = true;
+
+                                        Console.WriteLine("\nGPI Port : {0} \nStatus   : Enabled", gpiPort);
                                     }
 
-                                    MySqlDataReader dataReader2 = cmd.ExecuteReader();
+                                    Console.WriteLine("\nSet GPI Successfully");
 
-                                    if (dataReader2.HasRows)
+                                    try
                                     {
-                                        dataReader2.Close();
-                                        var res2 = cmd.ExecuteScalar();
-                                        if (res2 != null)
+                                        MySqlDatabase db1 = new();
+                                        string selQuery = "SELECT * FROM gpi_tbl WHERE ReaderID = " + ReaderID + " AND GPIPort =" + gpiPort + "";
+                                        cmd = new MySqlCommand(selQuery, db1.Con);
+
+                                        if (db1.Con.State != ConnectionState.Open)
                                         {
-                                            GPIID = Convert.ToInt32(res2);
+                                            db1.Con.Open();
                                         }
 
-                                        MySqlDatabase db2 = new();
-                                        string updQuery = "UPDATE gpi_tbl SET GPIStatus = @gpiMode WHERE GPIID = " + GPIID + " AND ReaderID = " + ReaderID + " AND GPIPort = " + gpiPort + "";
-                                        cmd = new MySqlCommand(updQuery, db2.Con);
-                                        cmd.Parameters.AddWithValue("@gpiMode", gpiMode);
-                                        cmd.ExecuteNonQuery();
+                                        MySqlDataReader dataReader2 = cmd.ExecuteReader();
+
+                                        if (dataReader2.HasRows)
+                                        {
+                                            dataReader2.Close();
+                                            var res2 = cmd.ExecuteScalar();
+                                            if (res2 != null)
+                                            {
+                                                GPIID = Convert.ToInt32(res2);
+                                            }
+
+                                            MySqlDatabase db2 = new();
+                                            string updQuery = "UPDATE gpi_tbl SET GPIStatus = @gpiMode WHERE GPIID = " + GPIID + " AND ReaderID = " + ReaderID + " AND GPIPort = " + gpiPort + "";
+                                            cmd = new MySqlCommand(updQuery, db2.Con);
+                                            cmd.Parameters.AddWithValue("@gpiMode", gpiMode);
+                                            cmd.ExecuteNonQuery();
+                                        }
+                                        else
+                                        {
+                                            dataReader2.Close();
+                                        }
+                                        db1.Con.Close();
                                     }
-                                    else
+                                    catch (Exception e)
                                     {
-                                        dataReader2.Close();
+                                        Console.WriteLine(e.Message);
                                     }
-                                    db1.Con.Close();
                                 }
-                                catch (Exception e)
+                                else
                                 {
-                                    Console.WriteLine(e.Message);
+                                    Console.WriteLine("Invalid Input Format");
                                 }
                             }
-                            else
+                            catch (Exception)
                             {
-                                Console.WriteLine("Invalid Input Format");
+                                Console.WriteLine("Zebra Reader Setting Error");
                             }
                             break;
                         case 2:
@@ -1404,10 +1404,9 @@ namespace RfidReader.Reader
                     switch (option)
                     {
                         case 1:
-                            Console.Write("\nGPO Port : ");
-
                             try
                             {
+                                Console.Write("\nGPO Port : ");
                                 gpoPort = Convert.ToInt32(Console.ReadLine());
 
                                 if (gpoPort <= 0 || gpoPort > rfidReader.ReaderCapabilities.NumGPOPorts)
@@ -1415,82 +1414,81 @@ namespace RfidReader.Reader
                                     Console.WriteLine("Enter a valid Port in the range 1-" + rfidReader.ReaderCapabilities.NumGPOPorts);
                                     continue;
                                 }
-                            }
-                            catch (IOException)
-                            {
-                                Console.WriteLine("Enter a valid Port in the range 1-" + rfidReader.ReaderCapabilities.NumGPOPorts);
-                                continue;
-                            }
 
-                            Console.WriteLine("\nGPO Status");
-                            Console.WriteLine("1. Low");
-                            Console.WriteLine("2. High");
-                            Console.Write("Option   : ");
+                                Console.WriteLine("\nGPO Status");
+                                Console.WriteLine("1. Low");
+                                Console.WriteLine("2. High");
+                                Console.Write("Option   : ");
 
-                            gpoStatus = Convert.ToInt32(Console.ReadLine());
+                                gpoStatus = Convert.ToInt32(Console.ReadLine());
 
-                            if (gpoStatus == 1 || gpoStatus == 2)
-                            {
-                                if (gpoStatus == 1)
+                                if (gpoStatus == 1 || gpoStatus == 2)
                                 {
-                                    gpoMode = "FALSE";
-                                    rfidReader.Config.GPO[gpoPort].PortState = GPOs.GPO_PORT_STATE.FALSE;
-
-                                    Console.WriteLine("\nGPI Port : {0} \nMode     : Low", gpoPort);
-                                }
-                                else if (gpoStatus == 2)
-                                {
-                                    gpoMode = "TRUE";
-                                    rfidReader.Config.GPO[gpoPort].PortState = GPOs.GPO_PORT_STATE.TRUE;
-
-                                    Console.WriteLine("\nGPI Port : {0} \nMode     : High", gpoPort);
-                                }
-
-                                Console.WriteLine("\nSet GPO Successfully");
-
-                                try
-                                {
-                                    MySqlDatabase db1 = new();
-                                    string selQuery = "SELECT * FROM gpo_tbl WHERE ReaderID = " + ReaderID + " AND GPOPort =" + gpoPort + "";
-                                    cmd = new MySqlCommand(selQuery, db1.Con);
-
-                                    if (db1.Con.State != ConnectionState.Open)
+                                    if (gpoStatus == 1)
                                     {
-                                        db1.Con.Open();
+                                        gpoMode = "FALSE";
+                                        rfidReader.Config.GPO[gpoPort].PortState = GPOs.GPO_PORT_STATE.FALSE;
+
+                                        Console.WriteLine("\nGPI Port : {0} \nMode     : Low", gpoPort);
+                                    }
+                                    else if (gpoStatus == 2)
+                                    {
+                                        gpoMode = "TRUE";
+                                        rfidReader.Config.GPO[gpoPort].PortState = GPOs.GPO_PORT_STATE.TRUE;
+
+                                        Console.WriteLine("\nGPI Port : {0} \nMode     : High", gpoPort);
                                     }
 
-                                    MySqlDataReader dataReader2 = cmd.ExecuteReader();
+                                    Console.WriteLine("\nSet GPO Successfully");
 
-                                    if (dataReader2.HasRows)
+                                    try
                                     {
-                                        dataReader2.Close();
-                                        var res2 = cmd.ExecuteScalar();
-                                        if (res2 != null)
+                                        MySqlDatabase db1 = new();
+                                        string selQuery = "SELECT * FROM gpo_tbl WHERE ReaderID = " + ReaderID + " AND GPOPort =" + gpoPort + "";
+                                        cmd = new MySqlCommand(selQuery, db1.Con);
+
+                                        if (db1.Con.State != ConnectionState.Open)
                                         {
-                                            GPOID = Convert.ToInt32(res2);
+                                            db1.Con.Open();
                                         }
 
-                                        MySqlDatabase db2 = new();
-                                        string updQuery = "UPDATE gpo_tbl SET GPOMode = @gpoMode WHERE GPOID = " + GPOID + " AND ReaderID = " + ReaderID + " AND GPOPort = " + gpoPort + "";
-                                        cmd = new MySqlCommand(updQuery, db2.Con);
-                                        cmd.Parameters.AddWithValue("@gpoMode", gpoMode);
-                                        cmd.ExecuteNonQuery();
-                                    }
-                                    else
-                                    {
-                                        dataReader2.Close();
-                                    }
-                                    db1.Con.Close();
-                                }
-                                catch (Exception e)
-                                {
-                                    Console.WriteLine(e.Message);
-                                }
+                                        MySqlDataReader dataReader2 = cmd.ExecuteReader();
 
+                                        if (dataReader2.HasRows)
+                                        {
+                                            dataReader2.Close();
+                                            var res2 = cmd.ExecuteScalar();
+                                            if (res2 != null)
+                                            {
+                                                GPOID = Convert.ToInt32(res2);
+                                            }
+
+                                            MySqlDatabase db2 = new();
+                                            string updQuery = "UPDATE gpo_tbl SET GPOMode = @gpoMode WHERE GPOID = " + GPOID + " AND ReaderID = " + ReaderID + " AND GPOPort = " + gpoPort + "";
+                                            cmd = new MySqlCommand(updQuery, db2.Con);
+                                            cmd.Parameters.AddWithValue("@gpoMode", gpoMode);
+                                            cmd.ExecuteNonQuery();
+                                        }
+                                        else
+                                        {
+                                            dataReader2.Close();
+                                        }
+                                        db1.Con.Close();
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        Console.WriteLine(e.Message);
+                                    }
+
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Invalid Input Format");
+                                }
                             }
-                            else
+                            catch (Exception)
                             {
-                                Console.WriteLine("Invalid Input Format");
+                                Console.WriteLine("Zebra Reader Setting Error");
                             }
                             break;
                         case 2:
@@ -1499,13 +1497,13 @@ namespace RfidReader.Reader
                             //    if (rfidReader.Config.GPO[index + 1].PortState == GPOs.GPO_PORT_STATE.TRUE)
                             //    {
                             //        Console.WriteLine($"Port Number : {index + 1}");
-                            //        Console.WriteLine($"Status      : Enabled");
+                            //        Console.WriteLine($"Status      : High");
                             //        Console.WriteLine();
                             //    }
                             //    else
                             //    {
                             //        Console.WriteLine($"Port Number : {index + 1}");
-                            //        Console.WriteLine($"Status      : Disabled");
+                            //        Console.WriteLine($"Status      : Low");
                             //        Console.WriteLine();
                             //    }
                             //}
@@ -1809,21 +1807,25 @@ namespace RfidReader.Reader
 
                 if (dataReader.HasRows)
                 {
-                    string session = dataReader.GetString("Session");
-                    int tagPopulation = dataReader.GetInt32("TagPopulation");
-                    int tagTransmit = dataReader.GetInt32("TagTransmit");
-                    string stateAware = dataReader.GetString("StateAware");
-                    string slFlag = dataReader.GetString("SLFlag");
-                    string invState = dataReader.GetString("InventoryState");
-                    //string? slFlag = dataReader.IsDBNull(dataReader.GetOrdinal("SLFlag")) ? null : dataReader.GetString("SLFlag");
-                    //string? invState = dataReader.IsDBNull(dataReader.GetOrdinal("InventoryState")) ? null : dataReader.GetString("InventoryState");
+                    while (dataReader.Read())
+                    {
+                        string session = dataReader.GetString("Session");
+                        int tagPopulation = dataReader.GetInt32("TagPopulation");
+                        int tagTransmit = dataReader.GetInt32("TagTransmit");
+                        string stateAware = dataReader.GetString("StateAware");
+                        string slFlag = dataReader.GetString("SLFlag");
+                        string invState = dataReader.GetString("InventoryState");
+                        //string? slFlag = dataReader.IsDBNull(dataReader.GetOrdinal("SLFlag")) ? null : dataReader.GetString("SLFlag");
+                        //string? invState = dataReader.IsDBNull(dataReader.GetOrdinal("InventoryState")) ? null : dataReader.GetString("InventoryState");
 
-                    Console.WriteLine("Session                     : {0} ", session);
-                    Console.WriteLine("Tag Population              : {0} ", tagPopulation);
-                    Console.WriteLine("Tag Transmit                : {0} ", tagTransmit);
-                    Console.WriteLine("State Aware                 : {0} ", stateAware);
-                    Console.WriteLine("SL Flag                     : {0} ", slFlag);
-                    Console.WriteLine("Inventory State             : {0} \n", invState);
+                        Console.WriteLine("GASSI");
+                        Console.WriteLine("Session                     : {0} ", session);
+                        Console.WriteLine("Tag Population              : {0} ", tagPopulation);
+                        Console.WriteLine("Tag Transmit                : {0} ", tagTransmit);
+                        Console.WriteLine("State Aware                 : {0} ", stateAware);
+                        Console.WriteLine("SL Flag                     : {0} ", slFlag);
+                        Console.WriteLine("Inventory State             : {0} \n", invState);
+                    }
                     db.Con.Close();
                 }
             }
