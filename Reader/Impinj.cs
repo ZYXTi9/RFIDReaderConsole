@@ -14,13 +14,12 @@ namespace RfidReader.Reader
 
         public List<ImpinjReader> listImpinjReaders = new List<ImpinjReader>();
 
-        private Program p;
-
         MySqlDatabase db = new MySqlDatabase();
         MySqlCommand? cmd;
         public int ReaderTypeID { get; set; }
         public int ReaderID { get; set; }
-        public string? HostName { get; set; }
+        //public string? HostName { get; set; }
+        private string HostName = "192.168.1.15";
         public int AntennaID { get; set; }
         public int AntennaInfoID { get; set; }
         public int GPIID { get; set; }
@@ -34,8 +33,8 @@ namespace RfidReader.Reader
         {
             try
             {
-                Console.Write("Hostname or IP Name   : ");
-                HostName = Console.ReadLine();
+                //Console.Write("Hostname or IP Name   : ");
+                //HostName = Console.ReadLine();
 
                 Console.WriteLine("Attempting to connect to {0} ({1}).",
                     impinjReader.Name, HostName);
@@ -380,37 +379,46 @@ namespace RfidReader.Reader
                                     Console.WriteLine("Invalid Input Format\n");
                                 }
                             }
-
-                            Console.Write("Tag Population : ");
-
-                            tagPopulation = Convert.ToInt32(Console.ReadLine());
-                            if (tagPopulation < 0 || tagPopulation > 10000)
+                            while (tagPopulation <= 0 || tagPopulation > 1000)
                             {
-                                Console.WriteLine("Value " + tagPopulation + " could not be converted.");
-                            }
-                            else
-                            {
-                                settings.TagPopulationEstimate = Convert.ToUInt16(tagPopulation);
+                                try
+                                {
+                                    Console.Write("Tag Population : ");
+                                    tagPopulation = Convert.ToInt32(Console.ReadLine());
 
-                                impinjReader.ApplySettings(settings);
-                                impinjReader.SaveSettings();
-                                settings.Save("settings.xml");
+                                    if (tagPopulation <= 0 || tagPopulation > 10000)
+                                    {
+                                        Console.WriteLine("Value " + tagPopulation + " could not be converted.\n");
+                                    }
+                                    else
+                                    {
+                                        settings.TagPopulationEstimate = Convert.ToUInt16(tagPopulation);
 
-                                string selQuery = @"SpReaderSettings";
-                                cmd = new MySqlCommand(selQuery, db.Con);
-                                cmd.CommandType = CommandType.StoredProcedure;
+                                        impinjReader.ApplySettings(settings);
+                                        impinjReader.SaveSettings();
+                                        settings.Save("settings.xml");
 
-                                cmd.Parameters.AddWithValue("@rID", ReaderID);
-                                cmd.Parameters.AddWithValue("@readerM", settings.ReaderMode.ToString());
-                                cmd.Parameters.AddWithValue("@searchM", settings.SearchMode.ToString());
-                                cmd.Parameters.AddWithValue("@sess", settings.Session.ToString());
-                                cmd.Parameters.AddWithValue("@tp", settings.TagPopulationEstimate.ToString());
+                                        string selQuery = @"SpReaderSettings";
+                                        cmd = new MySqlCommand(selQuery, db.Con);
+                                        cmd.CommandType = CommandType.StoredProcedure;
 
-                                db.Con.Open();
-                                cmd.ExecuteScalar();
-                                db.Con.Close();
+                                        cmd.Parameters.AddWithValue("@rID", ReaderID);
+                                        cmd.Parameters.AddWithValue("@readerM", settings.ReaderMode.ToString());
+                                        cmd.Parameters.AddWithValue("@searchM", settings.SearchMode.ToString());
+                                        cmd.Parameters.AddWithValue("@sess", settings.Session.ToString());
+                                        cmd.Parameters.AddWithValue("@tp", settings.TagPopulationEstimate.ToString());
 
-                                Console.WriteLine("\nSet Reader Settings Successfully");
+                                        db.Con.Open();
+                                        cmd.ExecuteScalar();
+                                        db.Con.Close();
+
+                                        Console.WriteLine("\nSet Reader Settings Successfully");
+                                    }
+                                }
+                                catch (OctaneSdkException)
+                                {
+                                    Console.WriteLine("Impinj Reader Setting Error");
+                                }
                             }
                             isWorking = false;
                             break;

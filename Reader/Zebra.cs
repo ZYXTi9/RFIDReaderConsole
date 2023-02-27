@@ -32,7 +32,7 @@ namespace RfidReader.Reader
         readonly TagStorageSettings tagStorageSettings;
         private Symbol.RFID3.AntennaInfo antennaInfo;
 
-        private ArrayList statusList = new ArrayList();
+        private ArrayList statusList;
 
         private BackgroundWorker bgWorker;
 
@@ -47,7 +47,7 @@ namespace RfidReader.Reader
             p = new();
             tagStorageSettings = new TagStorageSettings();
             antennaInfo = new AntennaInfo();
-            //statusList = new ArrayList();
+            statusList = new ArrayList();
             bgWorker = new BackgroundWorker();
             updateReadHandler = new updateRead(MyUpdateRead);
             //uniqueTags = new Hashtable();
@@ -773,6 +773,7 @@ namespace RfidReader.Reader
                     switch (option)
                     {
                         case 1:
+
                             Console.Write("\nAntenna                    : ");
                             antenna = Convert.ToInt32(Console.ReadLine());
 
@@ -888,18 +889,17 @@ namespace RfidReader.Reader
         public void EnableDisableAntenna()
         {
             bool isWorking = true;
-            int option;
-            int antenna = 0;
+            int antenna, option, antennaStatus;
             ushort[] antID = rfidReader.Config.Antennas.AvailableAntennas;
 
-            if (statusList.Count == 0)
-            {
-                foreach (ushort x in antID)
-                {
-                    antenna += 1;
-                    statusList.Add(antenna);
-                }
-            }
+            //if (statusList.Count == 0)
+            //{
+            //    foreach (ushort x in antID)
+            //    {
+            //        antenna += 1;
+            //        statusList.Add(antenna);
+            //    }
+            //}
 
             while (isWorking)
             {
@@ -916,45 +916,136 @@ namespace RfidReader.Reader
                     switch (option)
                     {
                         case 1:
-                            Console.WriteLine();
-                            Console.Write("Antenna                          : ");
-                            antenna = Convert.ToInt32(Console.ReadLine());
-                            if (antenna <= 0 || antenna > rfidReader.ReaderCapabilities.NumAntennaSupported)
+                            try
                             {
-                                Console.WriteLine("Enter a valid Antenna in the range 1-" + rfidReader.ReaderCapabilities.NumAntennaSupported);
-                                continue;
-                            }
+                                Console.Write("\nAntenna : ");
+                                antenna = Convert.ToInt32(Console.ReadLine());
 
-                            string query = "SELECT * FROM antenna_tbl WHERE ReaderID = " + ReaderID + " AND Antenna = " + antenna + "";
+                                if (antenna <= 0 || antenna > rfidReader.ReaderCapabilities.NumAntennaSupported)
+                                {
+                                    Console.WriteLine("Enter a valid Antenna in the range 1-" + rfidReader.ReaderCapabilities.NumAntennaSupported);
+                                    continue;
+                                }
 
-                            cmd = new MySqlCommand(query, db.Con);
+                                MySqlDatabase db1 = new();
 
-                            db.Con.Open();
-                            var res = cmd.ExecuteScalar();
-                            if (res != null)
-                            {
-                                AntennaID = Convert.ToInt32(res);
-                            }
-                            db.Con.Close();
+                                string selQuery1 = "SELECT * FROM antenna_tbl WHERE ReaderID = " + ReaderID + " AND Antenna = " + antenna + "";
 
-                            Console.WriteLine("\n[0] OFF");
-                            Console.WriteLine("[1] ON");
-                            Console.Write("Option       : ");
-                            int status = Convert.ToInt32(Console.ReadLine());
+                                cmd = new MySqlCommand(selQuery1, db1.Con);
 
-                            if (status == 0)
-                            {
-                                try
+                                if (db1.Con.State != ConnectionState.Open)
+                                {
+                                    db1.Con.Open();
+                                }
+                                var getAntennaID1 = cmd.ExecuteScalar();
+                                if (getAntennaID1 != null)
+                                {
+                                    AntennaID = Convert.ToInt32(getAntennaID1);
+                                }
+                                db1.Con.Close();
+
+                                Console.WriteLine("\n[0] OFF");
+                                Console.WriteLine("[1] ON");
+                                Console.Write("Option : ");
+
+                                antennaStatus = Convert.ToInt32(Console.ReadLine());
+
+                                if (antennaStatus == 0)
                                 {
                                     if (statusList.Contains(antenna))
                                     {
                                         statusList.Remove(Convert.ToInt32(antenna));
-                                        if (statusList.Count > 0)
+
+                                        if (statusList.Count == 0)
+                                        {
+                                            foreach (ushort x in antID)
+                                            {
+                                                statusList.Add(x);
+                                                statusList.Sort();
+                                                //string selQuery = "UPDATE antenna_info_tbl SET AntennaStatus = 'Enabled' WHERE AntennaInfoID = " + AntennaInfoID + " AND AntennaStatus = 'Disabled'";
+                                            }
+
+                                            MySqlDatabase db2 = new();
+
+                                            for (int i = 0; i < rfidReader.ReaderCapabilities.NumAntennaSupported; i++)
+                                            {
+                                                //if (statusList.Contains(i + 1))
+                                                //{
+                                                //}
+                                                //else
+                                                //{
+                                                //    statusList.Add(i + 1);
+                                                //    statusList.Sort();
+                                                //}
+
+                                                string selQuery2 = "SELECT * FROM antenna_tbl WHERE ReaderID = " + ReaderID + " AND Antenna = " + (i + 1) + "";
+                                                cmd = new MySqlCommand(selQuery2, db2.Con);
+
+                                                if (db2.Con.State != ConnectionState.Open)
+                                                {
+                                                    db2.Con.Open();
+                                                }
+
+                                                MySqlDataReader dataReader2 = cmd.ExecuteReader();
+
+                                                if (dataReader2.HasRows)
+                                                {
+                                                    dataReader2.Close();
+                                                    var getAntennaID2 = cmd.ExecuteScalar();
+                                                    if (getAntennaID2 != null)
+                                                    {
+                                                        AntennaID = Convert.ToInt32(getAntennaID2);
+                                                    }
+
+                                                    MySqlDatabase db3 = new();
+                                                    string selQuery3 = "SELECT * FROM antenna_tbl a INNER JOIN antenna_info_tbl b ON a.AntennaID = b.AntennaID WHERE a.ReaderID = " + ReaderID + " AND b.AntennaID = " + AntennaID + " AND b.AntennaStatus= 'Disabled'";
+                                                    cmd = new MySqlCommand(selQuery3, db3.Con);
+
+                                                    if (db3.Con.State != ConnectionState.Open)
+                                                    {
+                                                        db3.Con.Open();
+                                                    }
+
+                                                    MySqlDataReader dataReader3 = cmd.ExecuteReader();
+
+                                                    if (dataReader3.HasRows)
+                                                    {
+                                                        dataReader3.Close();
+                                                        var getAntennaInfoID = cmd.ExecuteScalar();
+                                                        if (getAntennaInfoID != null)
+                                                        {
+                                                            AntennaInfoID = Convert.ToInt32(getAntennaInfoID);
+                                                        }
+
+                                                        MySqlDatabase db4 = new();
+                                                        string updQuery = "UPDATE antenna_info_tbl SET AntennaStatus = 'Enabled' WHERE AntennaInfoID = " + AntennaInfoID + "";
+                                                        cmd = new MySqlCommand(updQuery, db4.Con);
+
+                                                        cmd.Parameters.Clear();
+
+                                                        cmd.ExecuteNonQuery();
+                                                    }
+                                                    else
+                                                    {
+                                                        dataReader3.Close();
+                                                    }
+                                                    db3.Con.Close();
+                                                }
+                                            }
+                                            //for (int i = 0; i < rfidReader.ReaderCapabilities.NumAntennaSupported; i++)
+                                            //{
+                                            //    statusList.Add(i + 1);
+                                            //}
+                                            Console.WriteLine("\nDisabling all antennas is not allowed.");
+                                            Console.WriteLine("All antennas have been reset and are now available.");
+                                        }
+                                        else
+                                        //if (statusList.Count > 0)
                                         {
                                             ushort[] antList = new ushort[statusList.Count];
-                                            for (int index = 0; index < statusList.Count; index++)
+                                            for (int i = 0; i < statusList.Count; i++)
                                             {
-                                                antList[index] = Convert.ToUInt16(statusList[index].ToString());
+                                                antList[i] = Convert.ToUInt16(statusList[i].ToString());
                                             }
 
                                             if (null == antennaInfo)
@@ -965,13 +1056,47 @@ namespace RfidReader.Reader
                                             {
                                                 antennaInfo.AntennaID = antList;
                                             }
+
+                                            Console.WriteLine("Antenna Port :  {0} ", antenna);
+                                            Console.WriteLine("Status       : OFF\n");
+                                            Console.WriteLine("Set Antenna Successfully\n");
+
+                                            string selQuery = @"SpCheckAntennaInfo";
+                                            cmd = new MySqlCommand(selQuery, db.Con);
+                                            cmd.CommandType = CommandType.StoredProcedure;
+
+                                            cmd.Parameters.AddWithValue("@aID", AntennaID);
+                                            cmd.Parameters.AddWithValue("@antStatus", "Disabled");
+
+                                            db.Con.Open();
+
+                                            cmd.ExecuteScalar();
+
+                                            db.Con.Close();
                                         }
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"Antenna Port {antenna} is already OFF");
+                                    }
+                                }
+                                else if (antennaStatus == 1)
+                                {
+                                    if (statusList.Contains(antenna))
+                                    {
+                                        Console.WriteLine($"Antenna Port {antenna} is already ON");
+                                    }
+                                    else
+                                    {
+                                        statusList.Add(antenna);
+                                        statusList.Sort();
 
                                         string selQuery = @"SpCheckAntennaInfo";
                                         cmd = new MySqlCommand(selQuery, db.Con);
                                         cmd.CommandType = CommandType.StoredProcedure;
 
                                         cmd.Parameters.AddWithValue("@aID", AntennaID);
+                                        cmd.Parameters.AddWithValue("@antStatus", "Enabled");
 
                                         db.Con.Open();
 
@@ -980,50 +1105,27 @@ namespace RfidReader.Reader
                                         db.Con.Close();
 
                                         Console.WriteLine("Antenna Port :  {0} ", antenna);
-                                        Console.WriteLine("Status       : OFF");
+                                        Console.WriteLine("Status       : ON\n");
                                         Console.WriteLine("Set Antenna Successfully\n");
                                     }
-                                    else
-                                    {
-                                        Console.WriteLine($"Antenna Port {antenna} is already OFF");
-                                    }
-                                }
-                                catch (Exception e)
-                                {
-                                    Console.WriteLine(e.Message);
-                                }
-                            }
-                            else if (status == 1)
-                            {
-                                if (statusList.Contains(antenna))
-                                {
-                                    Console.WriteLine($"Antenna Port {antenna} is already ON");
                                 }
                                 else
                                 {
-                                    statusList.Add(antenna);
-                                    statusList.Sort();
-
-                                    Console.WriteLine();
-                                    Console.WriteLine($"Antenna Port : {antenna}");
-                                    Console.WriteLine($"Status      : ON");
-                                    Console.WriteLine("Set Antenna Successfully");
-                                    Console.WriteLine();
+                                    Console.WriteLine("Enter a valid integer in the range 0-1");
+                                    break;
                                 }
                             }
-                            else
+                            catch (Exception)
                             {
-                                Console.WriteLine("Enter a valid integer in the range 0-1");
-                                break;
+                                Console.WriteLine("Zebra Reader Setting Error");
                             }
                             break;
                         case 2:
-                            //for (int index = 0; index < statusList.Count; index++)
-                            //{
-                            //    Console.WriteLine($"Antenna   : {statusList[index]}");
-                            //    Console.WriteLine($"Status    : ON ");
-                            //    Console.WriteLine();
-                            //}
+                            for (int index = 0; index < statusList.Count; index++)
+                            {
+                                Console.WriteLine($"Antenna   : {statusList[index]}");
+                                Console.WriteLine($"Status    : ON\n");
+                            }
                             DisplayAntennaStatus();
                             break;
                         case 3:
@@ -1144,7 +1246,7 @@ namespace RfidReader.Reader
                         db1.Con.Close();
                     }
                 }
-                Console.WriteLine("\nSuccessfully updated and enabled all antennas.");
+                Console.WriteLine("\nSuccessfully Enabled All Antennas.");
             }
             catch (Exception e)
             {
@@ -2623,7 +2725,7 @@ namespace RfidReader.Reader
                 //Enabling Antenna
                 MySqlDatabase db6 = new();
 
-                string selQuery6 = "SELECT a.Antenna, b.AntennaStatus FROM antenna_tbl a INNER JOIN antenna_info_tbl b ON a.AntennaID = b.AntennaID WHERE a.ReaderID = " + ReaderID + " ORDER BY a.Antenna ASC";
+                string selQuery6 = "SELECT a.Antenna, b.AntennaStatus FROM antenna_tbl a INNER JOIN antenna_info_tbl b ON a.AntennaID = b.AntennaID WHERE a.ReaderID = " + ReaderID + " AND b.AntennaStatus = 'Enabled' ORDER BY a.Antenna ASC";
                 cmd = new MySqlCommand(selQuery6, db6.Con);
                 MySqlDataReader dataReader6 = cmd.ExecuteReader();
 

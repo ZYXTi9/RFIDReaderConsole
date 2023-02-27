@@ -15,10 +15,10 @@
     <GpiLevel>false</GpiLevel>
     <Timeout>0</Timeout>
   </AutoStop>
-  <ReaderMode>AutoSetDenseReader</ReaderMode>
-  <SearchMode>DualTarget</SearchMode>
-  <Session>2</Session>
-  <TagPopulationEstimate>32</TagPopulationEstimate>
+  <ReaderMode>DenseReaderM4</ReaderMode>
+  <SearchMode>ReaderSelected</SearchMode>
+  <Session>1</Session>
+  <TagPopulationEstimate>1</TagPopulationEstimate>
   <LowDutyCycle>
     <IsEnabled>false</IsEnabled>
     <EmptyFieldTimeoutInMs>0</EmptyFieldTimeoutInMs>
@@ -69,6 +69,24 @@
       <IsEnabled>true</IsEnabled>
       <PortNumber>2</PortNumber>
       <PortName>Antenna Port 2</PortName>
+      <TxPowerInDbm>32.5</TxPowerInDbm>
+      <RxSensitivityInDbm>-80</RxSensitivityInDbm>
+      <MaxRxSensitivity>false</MaxRxSensitivity>
+      <MaxTxPower>false</MaxTxPower>
+    </Antenna>
+    <Antenna>
+      <IsEnabled>true</IsEnabled>
+      <PortNumber>3</PortNumber>
+      <PortName>Antenna Port 3</PortName>
+      <TxPowerInDbm>32.5</TxPowerInDbm>
+      <RxSensitivityInDbm>-80</RxSensitivityInDbm>
+      <MaxRxSensitivity>false</MaxRxSensitivity>
+      <MaxTxPower>false</MaxTxPower>
+    </Antenna>
+    <Antenna>
+      <IsEnabled>true</IsEnabled>
+      <PortNumber>4</PortNumber>
+      <PortName>Antenna Port 4</PortName>
       <TxPowerInDbm>32.5</TxPowerInDbm>
       <RxSensitivityInDbm>-80</RxSensitivityInDbm>
       <MaxRxSensitivity>false</MaxRxSensitivity>
