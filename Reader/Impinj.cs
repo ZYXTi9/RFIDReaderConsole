@@ -42,31 +42,31 @@ namespace RfidReader.Reader
                 impinjReader.Connect(HostName);
 
                 if (impinjReader.IsConnected == true)
-                    //{
+                {
                     Console.WriteLine("Successfully connected.");
 
-                //impinjReader.ApplyDefaultSettings();
-                //Settings settings = impinjReader.QuerySettings();
-                //if (settings != null)
-                //{
-                //    settings.Report.IncludeAntennaPortNumber = true;
-                //    settings.Report.IncludeSeenCount = true;
-                //    settings.TagPopulationEstimate = 32;
-                //    settings.HoldReportsOnDisconnect = true;
+                    //impinjReader.ApplyDefaultSettings();
+                    //Settings settings = impinjReader.QuerySettings();
+                    //if (settings != null)
+                    //{
+                    //    settings.Report.IncludeAntennaPortNumber = true;
+                    //    settings.Report.IncludeSeenCount = true;
+                    //    settings.TagPopulationEstimate = 32;
+                    //    settings.HoldReportsOnDisconnect = true;
 
-                //    settings.Keepalives.Enabled = true;
-                //    settings.Keepalives.PeriodInMs = 3000;
-                //    settings.Keepalives.EnableLinkMonitorMode = true;
-                //    settings.Keepalives.LinkDownThreshold = 5;
+                    //    settings.Keepalives.Enabled = true;
+                    //    settings.Keepalives.PeriodInMs = 3000;
+                    //    settings.Keepalives.EnableLinkMonitorMode = true;
+                    //    settings.Keepalives.LinkDownThreshold = 5;
 
-                //    impinjReader.KeepaliveReceived += OnKeepaliveReceived;
-                //    impinjReader.ConnectionLost += OnConnectionLost;
+                    //    impinjReader.KeepaliveReceived += OnKeepaliveReceived;
+                    //    impinjReader.ConnectionLost += OnConnectionLost;
 
-                //    impinjReader.ApplySettings(settings);
-                //    impinjReader.SaveSettings();
-                //    settings.Save("settings.xml");
-                //}
-                {
+                    //    impinjReader.ApplySettings(settings);
+                    //    impinjReader.SaveSettings();
+                    //    settings.Save("settings.xml");
+                    //}
+                    //{
                     string selQuery = @"SpCheckReader";
                     cmd = new MySqlCommand(selQuery, db.Con);
                     cmd.CommandType = CommandType.StoredProcedure;
@@ -100,19 +100,23 @@ namespace RfidReader.Reader
                             db2.Con.Open();
                         }
                         db2.Con.Close();
+
+                        Settings settings = Settings.Load("settings.xml");
+
+                        impinjReader.KeepaliveReceived += OnKeepaliveReceived;
+                        impinjReader.ConnectionLost += OnConnectionLost;
+
+                        impinjReader.ApplySettings(settings);
+                        impinjReader.SaveSettings();
+                        settings.Save("settings.xml");
                     }
                     else
                     {
+                        impinjReader.KeepaliveReceived += OnKeepaliveReceived;
+                        impinjReader.ConnectionLost += OnConnectionLost;
+
                         Default();
                     }
-                    Settings settings = Settings.Load("settings.xml");
-
-                    impinjReader.KeepaliveReceived += OnKeepaliveReceived;
-                    impinjReader.ConnectionLost += OnConnectionLost;
-
-                    impinjReader.ApplySettings(settings);
-                    impinjReader.SaveSettings();
-                    settings.Save("settings.xml");
                     Menu();
                 }
             }
@@ -1371,20 +1375,42 @@ namespace RfidReader.Reader
                 Console.WriteLine("Exception : {0}", e.Message);
             }
         }
-        static void OnTagsReported(ImpinjReader sender, TagReport report)
+        private void OnTagsReported(ImpinjReader sender, TagReport report)
         {
             foreach (Tag tag in report)
             {
-                string epc = tag.Epc.ToString();
+                string epc = tag.Epc.ToHexString();
 
                 totalTags += tag.TagSeenCount;
 
                 if (!uniqueTags.ContainsKey(epc))
                 {
                     Console.WriteLine("Antenna : {0}, EPC : {1}",
-                                        tag.AntennaPortNumber, tag.Epc);
+                                        tag.AntennaPortNumber, epc);
                     uniqueTags.Add(epc, tag);
                 }
+
+                string query = "SELECT * FROM antenna_tbl WHERE ReaderID = " + ReaderID + " AND Antenna = " + tag.AntennaPortNumber + "";
+
+                cmd = new MySqlCommand(query, db.Con);
+
+                db.Con.Open();
+                var res = cmd.ExecuteScalar();
+                if (res != null)
+                {
+                    AntennaID = Convert.ToInt32(res);
+                }
+                db.Con.Close();
+
+                string selQuery = @"SpRead";
+                cmd = new MySqlCommand(selQuery, db.Con);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue("@aID", AntennaID);
+                cmd.Parameters.AddWithValue("@epcTag", epc);
+                db.Con.Open();
+                cmd.ExecuteScalar();
+                db.Con.Close();
             }
         }
         static bool ReaderIsAvailable(string address)

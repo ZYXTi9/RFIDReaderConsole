@@ -27,7 +27,7 @@ namespace RfidReader.Reader
         public int GPIID { get; set; }
         public int GPOID { get; set; }
 
-        private string zebraStatus = "Connected";
+        public string zebraStatus = "Connected";
 
         readonly TagStorageSettings tagStorageSettings;
         private Symbol.RFID3.AntennaInfo antennaInfo;
@@ -171,7 +171,8 @@ namespace RfidReader.Reader
                             GPIOConfig();
                             break;
                         case 5:
-                            p.Main();
+                            //p.Main();
+                            Read();
                             break;
                         default:
                             Console.WriteLine("Enter a valid Integer in the range 1-5");
@@ -2066,6 +2067,14 @@ namespace RfidReader.Reader
             finally
             {
                 rfidReader.Actions.Inventory.Stop();
+                //MySqlDatabase db1 = new();
+                //string updQuery = "UPDATE read_tbl SET TimeOut = TIME_FORMAT(NOW(), '%h:%i:%s %p'), LogActive = 'No' WHERE ReadID = @existingID AND LogActive = 'Yes'";
+
+                //cmd = new MySqlCommand(updQuery, db1.Con);
+
+                //cmd.Parameters.Clear();
+
+                //cmd.ExecuteNonQuery();
             }
         }
         private void MyUpdateRead(Events.ReadEventData eventData)
@@ -2079,19 +2088,19 @@ namespace RfidReader.Reader
                 for (int nIndex = 0; nIndex < tagData.Length; nIndex++)
                 {
                     Symbol.RFID3.TagData tag = tagData[nIndex];
-                    string tagID = tag.TagID;
+                    string epc = tag.TagID.ToString();
                     bool isFound = false;
 
                     lock (uniqueTags.SyncRoot)
                     {
-                        isFound = uniqueTags.ContainsKey(tagID);
+                        isFound = uniqueTags.ContainsKey(epc);
                         if (!isFound)
                         {
-                            isFound = uniqueTags.ContainsKey(tagID);
+                            isFound = uniqueTags.ContainsKey(epc);
                         }
                     }
 
-                    dt.Rows.Add(tagID, tag.AntennaID);
+                    dt.Rows.Add(epc, tag.AntennaID);
 
                     if (isFound)
                     {
@@ -2100,12 +2109,34 @@ namespace RfidReader.Reader
                     else
                     {
                         totalTags += tag.TagSeenCount;
-                        Console.WriteLine($"{tagID} {tag.AntennaID}");
+                        Console.WriteLine($"{epc} {tag.AntennaID}");
                     }
                     lock (uniqueTags.SyncRoot)
                     {
-                        uniqueTags.Add(tagID, dt.Rows);
+                        uniqueTags.Add(epc, dt.Rows);
                     }
+
+                    string query = "SELECT * FROM antenna_tbl WHERE ReaderID = " + ReaderID + " AND Antenna = " + tag.AntennaID + "";
+
+                    cmd = new MySqlCommand(query, db.Con);
+
+                    db.Con.Open();
+                    var res = cmd.ExecuteScalar();
+                    if (res != null)
+                    {
+                        AntennaID = Convert.ToInt32(res);
+                    }
+                    db.Con.Close();
+
+                    string selQuery = @"SpRead";
+                    cmd = new MySqlCommand(selQuery, db.Con);
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    cmd.Parameters.AddWithValue("@aID", AntennaID);
+                    cmd.Parameters.AddWithValue("@epcTag", epc);
+                    db.Con.Open();
+                    cmd.ExecuteScalar();
+                    db.Con.Close();
                 }
             }
         }

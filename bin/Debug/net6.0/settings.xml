@@ -15,10 +15,10 @@
     <GpiLevel>false</GpiLevel>
     <Timeout>0</Timeout>
   </AutoStop>
-  <ReaderMode>DenseReaderM4</ReaderMode>
-  <SearchMode>ReaderSelected</SearchMode>
-  <Session>1</Session>
-  <TagPopulationEstimate>1</TagPopulationEstimate>
+  <ReaderMode>AutoSetDenseReader</ReaderMode>
+  <SearchMode>DualTarget</SearchMode>
+  <Session>2</Session>
+  <TagPopulationEstimate>32</TagPopulationEstimate>
   <LowDutyCycle>
     <IsEnabled>false</IsEnabled>
     <EmptyFieldTimeoutInMs>0</EmptyFieldTimeoutInMs>

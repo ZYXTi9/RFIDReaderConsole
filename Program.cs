@@ -64,7 +64,7 @@ namespace RfidReader
                     }
                     else if (connectedTo == 3)
                     {
-                        if (impinj.impinjStatus == "Connected")
+                        if (impinj.impinjStatus == "Connected" || zebra.zebraStatus == "Connected")
                         {
                             impinj.Read();
                             zebra.Read();
