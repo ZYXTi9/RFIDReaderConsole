@@ -2042,7 +2042,7 @@ namespace RfidReader.Reader
             try
             {
                 Console.ReadKey();
-                Console.WriteLine("Total Tags: " + uniqueTags.Count + "(" + totalTags + ")");
+                Console.WriteLine("Zebra Total Tags: " + uniqueTags.Count + "(" + totalTags + ")");
             }
             catch (IOException)
             {
@@ -2114,27 +2114,36 @@ namespace RfidReader.Reader
                         uniqueTags.Add(epc, dt.Rows);
                     }
 
-                    string query = "SELECT * FROM antenna_tbl WHERE ReaderID = " + ReaderID + " AND Antenna = " + tag.AntennaID + "";
+                    MySqlDatabase db1 = new();
+                    string selQuery1 = "SELECT * FROM antenna_tbl WHERE ReaderID = " + ReaderID + " AND Antenna = " + tag.AntennaID + "";
 
-                    cmd = new MySqlCommand(query, db.Con);
+                    cmd = new MySqlCommand(selQuery1, db1.Con);
 
-                    db.Con.Open();
+                    if (db1.Con.State != ConnectionState.Open)
+                    {
+                        db1.Con.Open();
+                    }
                     var res = cmd.ExecuteScalar();
                     if (res != null)
                     {
                         AntennaID = Convert.ToInt32(res);
                     }
-                    db.Con.Close();
+                    db1.Con.Close();
 
-                    string selQuery = @"SpRead";
-                    cmd = new MySqlCommand(selQuery, db.Con);
+
+                    MySqlDatabase db2 = new();
+                    string selQuery2 = @"SpRead";
+                    cmd = new MySqlCommand(selQuery2, db2.Con);
                     cmd.CommandType = CommandType.StoredProcedure;
 
                     cmd.Parameters.AddWithValue("@aID", AntennaID);
                     cmd.Parameters.AddWithValue("@epcTag", epc);
-                    db.Con.Open();
+                    if (db2.Con.State != ConnectionState.Open)
+                    {
+                        db2.Con.Open();
+                    }
                     cmd.ExecuteScalar();
-                    db.Con.Close();
+                    db2.Con.Close();
                 }
             }
         }

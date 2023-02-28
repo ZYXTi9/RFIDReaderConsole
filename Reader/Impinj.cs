@@ -1364,14 +1364,11 @@ namespace RfidReader.Reader
                 Console.ReadLine();
 
                 impinjReader.Stop();
-                Console.WriteLine("Total Tags: " + uniqueTags.Count + "(" + totalTags + ")"); MySqlDatabase db1 = new();
+                Console.WriteLine("Impinj Total Tags: " + uniqueTags.Count + "(" + totalTags + ")"); MySqlDatabase db1 = new();
 
                 string updQuery = "UPDATE read_tbl SET TimeOut = TIME_FORMAT(NOW(), '%h:%i:%s %p'), LogActive = 'No' WHERE LogActive = 'Yes'";
-
                 cmd = new MySqlCommand(updQuery, db1.Con);
-
                 cmd.Parameters.Clear();
-
                 cmd.ExecuteNonQuery();
             }
             catch (OctaneSdkException e)
@@ -1398,27 +1395,37 @@ namespace RfidReader.Reader
                     uniqueTags.Add(epc, tag);
                 }
 
-                string query = "SELECT * FROM antenna_tbl WHERE ReaderID = " + ReaderID + " AND Antenna = " + tag.AntennaPortNumber + "";
 
-                cmd = new MySqlCommand(query, db.Con);
+                MySqlDatabase db1 = new();
+                string selQuery1 = "SELECT * FROM antenna_tbl WHERE ReaderID = " + ReaderID + " AND Antenna = " + tag.AntennaPortNumber + "";
 
-                db.Con.Open();
+                cmd = new MySqlCommand(selQuery1, db1.Con);
+
+                if (db1.Con.State != ConnectionState.Open)
+                {
+                    db1.Con.Open();
+                }
                 var res = cmd.ExecuteScalar();
                 if (res != null)
                 {
                     AntennaID = Convert.ToInt32(res);
                 }
-                db.Con.Close();
+                db1.Con.Close();
 
-                string selQuery = @"SpRead";
-                cmd = new MySqlCommand(selQuery, db.Con);
+
+                MySqlDatabase db2 = new();
+                string selQuery2 = @"SpRead";
+                cmd = new MySqlCommand(selQuery2, db2.Con);
                 cmd.CommandType = CommandType.StoredProcedure;
 
                 cmd.Parameters.AddWithValue("@aID", AntennaID);
                 cmd.Parameters.AddWithValue("@epcTag", epc);
-                db.Con.Open();
+                if (db2.Con.State != ConnectionState.Open)
+                {
+                    db2.Con.Open();
+                }
                 cmd.ExecuteScalar();
-                db.Con.Close();
+                db2.Con.Close();
             }
         }
         static bool ReaderIsAvailable(string address)
