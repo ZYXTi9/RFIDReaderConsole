@@ -11,3 +11,4 @@ SELECT * FROM singulation_tbl;
 SELECT * FROM tag_storage_tbl;
 
 call truncate_all_tables();
+
