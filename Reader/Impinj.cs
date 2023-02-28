@@ -1364,7 +1364,15 @@ namespace RfidReader.Reader
                 Console.ReadLine();
 
                 impinjReader.Stop();
-                Console.WriteLine("Total Tags: " + uniqueTags.Count + "(" + totalTags + ")");
+                Console.WriteLine("Total Tags: " + uniqueTags.Count + "(" + totalTags + ")"); MySqlDatabase db1 = new();
+
+                string updQuery = "UPDATE read_tbl SET TimeOut = TIME_FORMAT(NOW(), '%h:%i:%s %p'), LogActive = 'No' WHERE LogActive = 'Yes'";
+
+                cmd = new MySqlCommand(updQuery, db1.Con);
+
+                cmd.Parameters.Clear();
+
+                cmd.ExecuteNonQuery();
             }
             catch (OctaneSdkException e)
             {

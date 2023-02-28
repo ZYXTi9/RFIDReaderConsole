@@ -2067,14 +2067,12 @@ namespace RfidReader.Reader
             finally
             {
                 rfidReader.Actions.Inventory.Stop();
-                //MySqlDatabase db1 = new();
-                //string updQuery = "UPDATE read_tbl SET TimeOut = TIME_FORMAT(NOW(), '%h:%i:%s %p'), LogActive = 'No' WHERE ReadID = @existingID AND LogActive = 'Yes'";
 
-                //cmd = new MySqlCommand(updQuery, db1.Con);
-
-                //cmd.Parameters.Clear();
-
-                //cmd.ExecuteNonQuery();
+                MySqlDatabase db1 = new();
+                string updQuery = "UPDATE read_tbl SET TimeOut = TIME_FORMAT(NOW(), '%h:%i:%s %p'), LogActive = 'No' WHERE LogActive = 'Yes'";
+                cmd = new MySqlCommand(updQuery, db1.Con);
+                cmd.Parameters.Clear();
+                cmd.ExecuteNonQuery();
             }
         }
         private void MyUpdateRead(Events.ReadEventData eventData)
