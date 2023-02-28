@@ -14,12 +14,12 @@ namespace RfidReader.Reader
 
         public List<ImpinjReader> listImpinjReaders = new List<ImpinjReader>();
 
-        MySqlDatabase db = new MySqlDatabase();
+        //MySqlDatabase db = new MySqlDatabase();
         MySqlCommand? cmd;
         public int ReaderTypeID { get; set; }
         public int ReaderID { get; set; }
         //public string? HostName { get; set; }
-        private string HostName = "192.168.1.15";
+        private string HostName = "192.168.1.242";
         public int AntennaID { get; set; }
         public int AntennaInfoID { get; set; }
         public int GPIID { get; set; }
@@ -67,8 +67,9 @@ namespace RfidReader.Reader
                     //    settings.Save("settings.xml");
                     //}
                     //{
+                    MySqlDatabase db1 = new();
                     string selQuery = @"SpCheckReader";
-                    cmd = new MySqlCommand(selQuery, db.Con);
+                    cmd = new MySqlCommand(selQuery, db1.Con);
                     cmd.CommandType = CommandType.StoredProcedure;
 
                     FeatureSet featureSet = impinjReader.QueryFeatureSet();
@@ -79,12 +80,16 @@ namespace RfidReader.Reader
                     cmd.Parameters.AddWithValue("@readerStatus", impinjStatus);
                     var getReaderID = cmd.ExecuteScalar();
 
+                    if (db1.Con.State != ConnectionState.Open)
+                    {
+                        db1.Con.Open();
+                    }
                     if (getReaderID != null)
                     {
                         ReaderID = Convert.ToInt32(getReaderID);
                     }
 
-                    db.Con.Close();
+                    db1.Con.Close();
 
                     MySqlDatabase db2 = new();
 
@@ -103,6 +108,12 @@ namespace RfidReader.Reader
 
                         Settings settings = Settings.Load("settings.xml");
 
+                        settings.HoldReportsOnDisconnect = true;
+                        settings.Keepalives.Enabled = true;
+                        settings.Keepalives.PeriodInMs = 3000;
+                        settings.Keepalives.EnableLinkMonitorMode = true;
+                        settings.Keepalives.LinkDownThreshold = 5;
+
                         impinjReader.KeepaliveReceived += OnKeepaliveReceived;
                         impinjReader.ConnectionLost += OnConnectionLost;
 
@@ -112,9 +123,6 @@ namespace RfidReader.Reader
                     }
                     else
                     {
-                        impinjReader.KeepaliveReceived += OnKeepaliveReceived;
-                        impinjReader.ConnectionLost += OnConnectionLost;
-
                         Default();
                     }
                     Menu();
@@ -326,7 +334,7 @@ namespace RfidReader.Reader
                                     Console.WriteLine("2. DenseReaderM8");
                                     Console.WriteLine("3. AutoSetDenseReader\n");
 
-                                    Console.Write("Reader Mode  : ");
+                                    Console.Write("Reader Mode    : ");
                                     readerMode = Convert.ToInt32(Console.ReadLine());
 
                                     if (readerMode == 1) settings.ReaderMode = ReaderMode.DenseReaderM4;
@@ -349,7 +357,7 @@ namespace RfidReader.Reader
                                     Console.WriteLine("3. DualTarget");
                                     Console.WriteLine("4. TagFocus\n");
 
-                                    Console.Write("Search Mode : ");
+                                    Console.Write("Search Mode    : ");
                                     searchMode = Convert.ToInt32(Console.ReadLine());
 
                                     if (searchMode == 1) settings.SearchMode = SearchMode.ReaderSelected;
@@ -371,7 +379,7 @@ namespace RfidReader.Reader
                                     Console.WriteLine("1. Session 1");
                                     Console.WriteLine("2. Session 2\n");
 
-                                    Console.Write("Session     : ");
+                                    Console.Write("Session        : ");
                                     session = Convert.ToInt32(Console.ReadLine());
 
                                     if (session == 1) settings.Session = 1;
@@ -402,6 +410,7 @@ namespace RfidReader.Reader
                                         impinjReader.SaveSettings();
                                         settings.Save("settings.xml");
 
+                                        MySqlDatabase db = new();
                                         string selQuery = @"SpReaderSettings";
                                         cmd = new MySqlCommand(selQuery, db.Con);
                                         cmd.CommandType = CommandType.StoredProcedure;
@@ -412,7 +421,11 @@ namespace RfidReader.Reader
                                         cmd.Parameters.AddWithValue("@sess", settings.Session.ToString());
                                         cmd.Parameters.AddWithValue("@tp", settings.TagPopulationEstimate.ToString());
 
-                                        db.Con.Open();
+                                        if (db.Con.State != ConnectionState.Open)
+                                        {
+                                            db.Con.Open();
+                                        }
+
                                         cmd.ExecuteScalar();
                                         db.Con.Close();
 
@@ -548,6 +561,7 @@ namespace RfidReader.Reader
                                     impinjReader.SaveSettings();
                                     settings.Save("settings.xml");
 
+                                    MySqlDatabase db = new();
                                     string selQuery = @"SpCheckAntenna";
                                     cmd = new MySqlCommand(selQuery, db.Con);
                                     cmd.CommandType = CommandType.StoredProcedure;
@@ -556,7 +570,12 @@ namespace RfidReader.Reader
                                     cmd.Parameters.AddWithValue("@ant", antenna);
                                     cmd.Parameters.AddWithValue("@sensitivity", settings.Antennas.GetAntenna(antID).RxSensitivityInDbm);
                                     cmd.Parameters.AddWithValue("@power", settings.Antennas.GetAntenna(antID).TxPowerInDbm);
-                                    db.Con.Open();
+
+                                    if (db.Con.State != ConnectionState.Open)
+                                    {
+                                        db.Con.Open();
+                                    }
+
                                     cmd.ExecuteScalar();
                                     db.Con.Close();
                                     Console.WriteLine("\nSet Antenna Configuration Successfully");
@@ -665,17 +684,20 @@ namespace RfidReader.Reader
 
                             ushort antID = (ushort)antenna;
 
+                            MySqlDatabase db1 = new();
                             string query = "SELECT * FROM antenna_tbl WHERE ReaderID = " + ReaderID + " AND Antenna = " + antenna + "";
+                            cmd = new MySqlCommand(query, db1.Con);
 
-                            cmd = new MySqlCommand(query, db.Con);
-
-                            db.Con.Open();
+                            if (db1.Con.State != ConnectionState.Open)
+                            {
+                                db1.Con.Open();
+                            }
                             var res = cmd.ExecuteScalar();
                             if (res != null)
                             {
                                 AntennaID = Convert.ToInt32(res);
                             }
-                            db.Con.Close();
+                            db1.Con.Close();
 
                             Console.WriteLine("\n[0] OFF");
                             Console.WriteLine("[1] ON");
@@ -694,22 +716,25 @@ namespace RfidReader.Reader
                                         impinjReader.SaveSettings();
                                         settings.Save("settings.xml");
 
+                                        MySqlDatabase db2 = new();
                                         string selQuery = @"SpCheckAntennaInfo";
-                                        cmd = new MySqlCommand(selQuery, db.Con);
+                                        cmd = new MySqlCommand(selQuery, db2.Con);
                                         cmd.CommandType = CommandType.StoredProcedure;
 
                                         cmd.Parameters.AddWithValue("@aID", AntennaID);
                                         cmd.Parameters.AddWithValue("@antStatus", settings.Antennas.GetAntenna(antID).IsEnabled.ToString());
 
-                                        db.Con.Open();
+                                        if (db2.Con.State != ConnectionState.Open)
+                                        {
+                                            db2.Con.Open();
+                                        }
 
                                         cmd.ExecuteScalar();
+                                        db2.Con.Close();
 
-                                        db.Con.Close();
-
-                                        Console.WriteLine("Antenna Port :  {0} ", antenna);
+                                        Console.WriteLine("\nAntenna Port :  {0} ", antenna);
                                         Console.WriteLine("Status       : OFF");
-                                        Console.WriteLine("Set Antenna Successfully\n");
+                                        Console.WriteLine("\nSet Antenna Successfully\n");
                                     }
                                     else
                                     {
@@ -731,53 +756,56 @@ namespace RfidReader.Reader
                                     impinjReader.SaveSettings();
                                     settings.Save("settings.xml");
 
+                                    MySqlDatabase db3 = new();
                                     string selQuery = @"SpCheckAntennaInfo";
-                                    cmd = new MySqlCommand(selQuery, db.Con);
+                                    cmd = new MySqlCommand(selQuery, db3.Con);
                                     cmd.CommandType = CommandType.StoredProcedure;
 
                                     cmd.Parameters.AddWithValue("@aID", AntennaID);
                                     cmd.Parameters.AddWithValue("@antStatus", settings.Antennas.GetAntenna(antID).IsEnabled.ToString());
 
-                                    db.Con.Open();
+                                    if (db3.Con.State != ConnectionState.Open)
+                                    {
+                                        db3.Con.Open();
+                                    }
 
                                     cmd.ExecuteScalar();
-
-                                    db.Con.Close();
+                                    db3.Con.Close();
 
                                     Console.WriteLine("Antenna Port :  {0} ", antenna);
                                     Console.WriteLine("Status      : ON");
-                                    Console.WriteLine("Set Antenna Successfully\n");
+                                    Console.WriteLine("\nSet Antenna Successfully\n");
                                 }
                                 else
                                 {
-                                    MySqlDatabase db = new();
+                                    MySqlDatabase db4 = new();
 
                                     string selQuery = "SELECT * FROM antenna_tbl a INNER JOIN antenna_info_tbl b ON a.AntennaID = b.AntennaID WHERE a.ReaderID = " + ReaderID + " AND b.AntennaID = " + AntennaID + "";
-                                    cmd = new MySqlCommand(selQuery, db.Con);
+                                    cmd = new MySqlCommand(selQuery, db4.Con);
                                     using (MySqlDataReader dataReader = cmd.ExecuteReader())
                                     {
                                         if (dataReader.HasRows)
                                         {
                                             dataReader.Close();
-                                            if (db.Con.State != ConnectionState.Open)
+                                            if (db4.Con.State != ConnectionState.Open)
                                             {
-                                                db.Con.Open();
+                                                db4.Con.Open();
                                             }
-                                            db.Con.Close();
+                                            db4.Con.Close();
                                             Console.WriteLine($"Antenna {antenna} is already ON");
                                         }
                                         else
                                         {
                                             string insertQuery = "INSERT INTO antenna_info_tbl (AntennaID, AntennaStatus) VALUES (" + AntennaID + ", 'True')";
-                                            using (MySqlCommand insertCmd = new MySqlCommand(insertQuery, db.Con))
+                                            using (MySqlCommand insertCmd = new MySqlCommand(insertQuery, db4.Con))
                                             {
                                                 dataReader.Close();
-                                                if (db.Con.State != ConnectionState.Open)
+                                                if (db4.Con.State != ConnectionState.Open)
                                                 {
-                                                    db.Con.Open();
+                                                    db4.Con.Open();
                                                 }
                                                 insertCmd.ExecuteNonQuery();
-                                                db.Con.Close();
+                                                db4.Con.Close();
                                             }
                                             Console.WriteLine($"Antenna {antenna} is already ON");
                                         }
@@ -1395,7 +1423,6 @@ namespace RfidReader.Reader
                     uniqueTags.Add(epc, tag);
                 }
 
-
                 MySqlDatabase db1 = new();
                 string selQuery1 = "SELECT * FROM antenna_tbl WHERE ReaderID = " + ReaderID + " AND Antenna = " + tag.AntennaPortNumber + "";
 
@@ -1411,7 +1438,6 @@ namespace RfidReader.Reader
                     AntennaID = Convert.ToInt32(res);
                 }
                 db1.Con.Close();
-
 
                 MySqlDatabase db2 = new();
                 string selQuery2 = @"SpRead";
@@ -1474,6 +1500,9 @@ namespace RfidReader.Reader
                 settings.Keepalives.PeriodInMs = 3000;
                 settings.Keepalives.EnableLinkMonitorMode = true;
                 settings.Keepalives.LinkDownThreshold = 5;
+
+                impinjReader.KeepaliveReceived += OnKeepaliveReceived;
+                impinjReader.ConnectionLost += OnConnectionLost;
 
                 impinjReader.ApplySettings(settings);
                 impinjReader.SaveSettings();

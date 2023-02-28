@@ -66,8 +66,8 @@ namespace RfidReader
                     {
                         if (impinj.impinjStatus == "Connected" || zebra.zebraStatus == "Connected")
                         {
-                            impinj.Read();
-                            zebra.Read();
+                            //impinj.Read();
+                            //zebra.Read();
                         }
                         else
                         {

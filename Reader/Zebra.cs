@@ -12,7 +12,7 @@ namespace RfidReader.Reader
     {
         RFIDReader rfidReader;
 
-        MySqlDatabase db = new MySqlDatabase();
+        //MySqlDatabase db = new MySqlDatabase();
         MySqlCommand? cmd;
 
         private Program p;
@@ -24,6 +24,7 @@ namespace RfidReader.Reader
         int Port = 5084;
         public int AntennaID { get; set; }
         public int AntennaInfoID { get; set; }
+        public int RadioID { get; set; }
         public int GPIID { get; set; }
         public int GPOID { get; set; }
 
@@ -73,8 +74,10 @@ namespace RfidReader.Reader
                 {
                     Console.WriteLine("Successfully connected.");
 
+                    MySqlDatabase db1 = new();
+
                     string selQuery = @"SpCheckZebraReader";
-                    cmd = new MySqlCommand(selQuery, db.Con);
+                    cmd = new MySqlCommand(selQuery, db1.Con);
                     cmd.CommandType = CommandType.StoredProcedure;
 
                     cmd.Parameters.AddWithValue("@rtypeID", ReaderTypeID);
@@ -90,7 +93,7 @@ namespace RfidReader.Reader
                         ReaderID = Convert.ToInt32(getReaderID);
                     }
 
-                    db.Con.Close();
+                    db1.Con.Close();
 
                     MySqlDatabase db2 = new();
 
@@ -467,7 +470,7 @@ namespace RfidReader.Reader
                                     db2.Con.Close();
 
                                 }
-                                Console.WriteLine("Set RF Mode Successfully");
+                                Console.WriteLine("\nSet RF Mode Successfully");
                             }
                             catch (Exception)
                             {
@@ -604,10 +607,6 @@ namespace RfidReader.Reader
                                 else if (choice.Key == ConsoleKey.N)
                                 {
                                     tagStorageSettings.TagFields &= ~TAG_FIELD.PHASE_INFO;
-                                }
-                                else
-                                {
-                                    Console.WriteLine("\n\nChoose between Y/N only");
                                 }
 
                                 rfidReader.Config.SetTagStorageSettings(tagStorageSettings);
@@ -775,7 +774,7 @@ namespace RfidReader.Reader
                     {
                         case 1:
 
-                            Console.Write("\nAntenna                    : ");
+                            Console.Write("\nAntenna                     : ");
                             antenna = Convert.ToInt32(Console.ReadLine());
 
                             if (antenna <= 0 || antenna > rfidReader.ReaderCapabilities.NumAntennaSupported)
@@ -803,8 +802,9 @@ namespace RfidReader.Reader
 
                                 rfidReader.Config.Antennas[antID[antenna]].SetConfig(antennaConfig);
 
+                                MySqlDatabase db1 = new();
                                 string selQuery = @"SpCheckZebraAntenna";
-                                cmd = new MySqlCommand(selQuery, db.Con);
+                                cmd = new MySqlCommand(selQuery, db1.Con);
                                 cmd.CommandType = CommandType.StoredProcedure;
 
                                 cmd.Parameters.AddWithValue("@rID", ReaderID);
@@ -812,9 +812,14 @@ namespace RfidReader.Reader
                                 cmd.Parameters.AddWithValue("@sensitivity", antennaConfig.ReceiveSensitivityIndex);
                                 cmd.Parameters.AddWithValue("@power", antennaConfig.TransmitPowerIndex);
                                 cmd.Parameters.AddWithValue("@freq", antennaConfig.TransmitFrequencyIndex);
-                                db.Con.Open();
+
+                                if (db1.Con.State != ConnectionState.Open)
+                                {
+                                    db1.Con.Open();
+                                }
+
                                 cmd.ExecuteScalar();
-                                db.Con.Close();
+                                db1.Con.Close();
 
                                 Console.WriteLine("\nSet Antenna Configuration Successfully");
                             }
@@ -1020,10 +1025,9 @@ namespace RfidReader.Reader
 
                                                         MySqlDatabase db4 = new();
                                                         string updQuery = "UPDATE antenna_info_tbl SET AntennaStatus = 'Enabled' WHERE AntennaInfoID = " + AntennaInfoID + "";
+
                                                         cmd = new MySqlCommand(updQuery, db4.Con);
-
                                                         cmd.Parameters.Clear();
-
                                                         cmd.ExecuteNonQuery();
                                                     }
                                                     else
@@ -1062,18 +1066,22 @@ namespace RfidReader.Reader
                                             Console.WriteLine("Status       : OFF\n");
                                             Console.WriteLine("Set Antenna Successfully\n");
 
-                                            string selQuery = @"SpCheckAntennaInfo";
-                                            cmd = new MySqlCommand(selQuery, db.Con);
+                                            MySqlDatabase db3 = new();
+                                            string selQuery2 = @"SpCheckAntennaInfo";
+                                            cmd = new MySqlCommand(selQuery2, db3.Con);
                                             cmd.CommandType = CommandType.StoredProcedure;
 
                                             cmd.Parameters.AddWithValue("@aID", AntennaID);
                                             cmd.Parameters.AddWithValue("@antStatus", "Disabled");
 
-                                            db.Con.Open();
+                                            if (db3.Con.State != ConnectionState.Open)
+                                            {
+                                                db3.Con.Open();
+                                            }
 
                                             cmd.ExecuteScalar();
 
-                                            db.Con.Close();
+                                            db3.Con.Close();
                                         }
                                     }
                                     else
@@ -1092,18 +1100,22 @@ namespace RfidReader.Reader
                                         statusList.Add(antenna);
                                         statusList.Sort();
 
+                                        MySqlDatabase db4 = new();
                                         string selQuery = @"SpCheckAntennaInfo";
-                                        cmd = new MySqlCommand(selQuery, db.Con);
+                                        cmd = new MySqlCommand(selQuery, db4.Con);
                                         cmd.CommandType = CommandType.StoredProcedure;
 
                                         cmd.Parameters.AddWithValue("@aID", AntennaID);
                                         cmd.Parameters.AddWithValue("@antStatus", "Enabled");
 
-                                        db.Con.Open();
+                                        if (db4.Con.State != ConnectionState.Open)
+                                        {
+                                            db4.Con.Open();
+                                        }
 
                                         cmd.ExecuteScalar();
 
-                                        db.Con.Close();
+                                        db4.Con.Close();
 
                                         Console.WriteLine("Antenna Port :  {0} ", antenna);
                                         Console.WriteLine("Status       : ON\n");
@@ -1122,11 +1134,11 @@ namespace RfidReader.Reader
                             }
                             break;
                         case 2:
-                            for (int index = 0; index < statusList.Count; index++)
-                            {
-                                Console.WriteLine($"Antenna   : {statusList[index]}");
-                                Console.WriteLine($"Status    : ON\n");
-                            }
+                            //for (int index = 0; index < statusList.Count; index++)
+                            //{
+                            //    Console.WriteLine($"Antenna   : {statusList[index]}");
+                            //    Console.WriteLine($"Status    : ON\n");
+                            //}
                             DisplayAntennaStatus();
                             break;
                         case 3:
@@ -1214,6 +1226,7 @@ namespace RfidReader.Reader
 
                         MySqlDatabase db2 = new();
                         string selQuery2 = "SELECT * FROM antenna_tbl a INNER JOIN antenna_info_tbl b ON a.AntennaID = b.AntennaID WHERE a.ReaderID = " + ReaderID + " AND b.AntennaID = " + AntennaID + " AND b.AntennaStatus= 'Disabled'";
+
                         cmd = new MySqlCommand(selQuery2, db2.Con);
 
                         if (db2.Con.State != ConnectionState.Open)
@@ -1226,6 +1239,7 @@ namespace RfidReader.Reader
                         if (dataReader2.HasRows)
                         {
                             dataReader2.Close();
+
                             var res2 = cmd.ExecuteScalar();
                             if (res2 != null)
                             {
@@ -1234,11 +1248,10 @@ namespace RfidReader.Reader
 
                             MySqlDatabase db3 = new();
                             string updQuery = "UPDATE antenna_info_tbl SET AntennaStatus = 'Enabled' WHERE AntennaInfoID = " + AntennaInfoID + "";
+
                             cmd = new MySqlCommand(updQuery, db3.Con);
-
-                            cmd.Parameters.Clear();
-
                             cmd.ExecuteNonQuery();
+                            cmd.Parameters.Clear();
                         }
                         else
                         {
@@ -1966,27 +1979,44 @@ namespace RfidReader.Reader
                             if (powerRadio == 0)
                             {
                                 rfidReader.Config.RadioPowerState = RADIO_POWER_STATE.OFF;
-                                Console.WriteLine("Set Power Radio OFF Successfully");
+                                Console.WriteLine("\nSet Power Radio OFF Successfully");
                             }
                             else if (powerRadio == 1)
                             {
                                 rfidReader.Config.RadioPowerState = RADIO_POWER_STATE.ON;
-                                Console.WriteLine("Set Power Radio ON Successfully");
+                                Console.WriteLine("\nSet Power Radio ON Successfully");
                             }
                             else
                             {
                                 Console.WriteLine("Enter a valid integer in the range 0-1");
                             }
-                            rfidReader.Config.RadioPowerState = RADIO_POWER_STATE.OFF;
+
+                            //Console.WriteLine("\nSet Power Radio {0} Successfully", rfidReader.Config.RadioPowerState);
+
+                            MySqlDatabase db1 = new();
+                            string selQuery1 = @"SpCheckZebraPowerRadio";
+                            cmd = new MySqlCommand(selQuery1, db1.Con);
+                            cmd.CommandType = CommandType.StoredProcedure;
+
+                            cmd.Parameters.AddWithValue("@rID", ReaderID);
+                            cmd.Parameters.AddWithValue("@rpStatus", rfidReader.Config.RadioPowerState.ToString());
+
+                            if (db1.Con.State != ConnectionState.Open)
+                            {
+                                db1.Con.Open();
+                            }
+
+                            cmd.ExecuteScalar();
+                            db1.Con.Close();
+
                             break;
                         case 2:
                             //Console.WriteLine("Power Radio Status : " + rfidReader.Config.RadioPowerState);
                             try
                             {
-                                MySqlDatabase db = new();
-
-                                string selQuery = "SELECT * FROM power_radio_tbl WHERE ReaderID = " + ReaderID + "";
-                                cmd = new MySqlCommand(selQuery, db.Con);
+                                MySqlDatabase db2 = new();
+                                string selQuery2 = "SELECT * FROM power_radio_tbl WHERE ReaderID = " + ReaderID + "";
+                                cmd = new MySqlCommand(selQuery2, db2.Con);
                                 MySqlDataReader dataReader = cmd.ExecuteReader();
 
                                 if (dataReader.HasRows)
@@ -1995,9 +2025,9 @@ namespace RfidReader.Reader
                                     {
                                         string radioStatus = dataReader.GetString("RadioStatus");
 
-                                        Console.WriteLine("Radio Status                : {0} ", radioStatus);
+                                        Console.WriteLine("\nRadio Status                : {0} ", radioStatus);
                                     }
-                                    db.Con.Close();
+                                    db2.Con.Close();
                                 }
                             }
                             catch (Exception e)
