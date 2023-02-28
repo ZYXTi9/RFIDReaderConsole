@@ -108,12 +108,6 @@ namespace RfidReader.Reader
 
                         Settings settings = Settings.Load("settings.xml");
 
-                        settings.HoldReportsOnDisconnect = true;
-                        settings.Keepalives.Enabled = true;
-                        settings.Keepalives.PeriodInMs = 3000;
-                        settings.Keepalives.EnableLinkMonitorMode = true;
-                        settings.Keepalives.LinkDownThreshold = 5;
-
                         impinjReader.KeepaliveReceived += OnKeepaliveReceived;
                         impinjReader.ConnectionLost += OnConnectionLost;
 
@@ -391,7 +385,7 @@ namespace RfidReader.Reader
                                     Console.WriteLine("Invalid Input Format\n");
                                 }
                             }
-                            while (tagPopulation <= 0 || tagPopulation > 1000)
+                            while (tagPopulation <= 0 || tagPopulation > 10000)
                             {
                                 try
                                 {
@@ -772,8 +766,8 @@ namespace RfidReader.Reader
                                     cmd.ExecuteScalar();
                                     db3.Con.Close();
 
-                                    Console.WriteLine("Antenna Port :  {0} ", antenna);
-                                    Console.WriteLine("Status      : ON");
+                                    Console.WriteLine("\nAntenna Port :  {0} ", antenna);
+                                    Console.WriteLine("Status       : ON");
                                     Console.WriteLine("\nSet Antenna Successfully\n");
                                 }
                                 else
@@ -1389,11 +1383,12 @@ namespace RfidReader.Reader
                 impinjReader.Start();
 
                 Console.WriteLine("Press Enter to stop Inventory");
-                Console.ReadLine();
+                Console.ReadKey();
 
+                Console.WriteLine("Impinj Total Tags: " + uniqueTags.Count + "(" + totalTags + ")");
                 impinjReader.Stop();
-                Console.WriteLine("Impinj Total Tags: " + uniqueTags.Count + "(" + totalTags + ")"); MySqlDatabase db1 = new();
 
+                MySqlDatabase db1 = new();
                 string updQuery = "UPDATE read_tbl SET TimeOut = TIME_FORMAT(NOW(), '%h:%i:%s %p'), LogActive = 'No' WHERE LogActive = 'Yes'";
                 cmd = new MySqlCommand(updQuery, db1.Con);
                 cmd.Parameters.Clear();
@@ -1473,11 +1468,11 @@ namespace RfidReader.Reader
         {
             Console.WriteLine("Connection lost : {0} ({1})", reader.Name, reader.Address);
 
-            while (!ReaderIsAvailable(reader.Address))
-            {
-                Console.Write(".");
-                Thread.Sleep(1000);
-            }
+            //while (!ReaderIsAvailable(reader.Address))
+            //{
+            //    Console.Write(".");
+            //    Thread.Sleep(1000);
+            //}
 
             if (ReaderIsAvailable(reader.Address) == true)
             {
@@ -1494,7 +1489,7 @@ namespace RfidReader.Reader
                 settings.Report.IncludeAntennaPortNumber = true;
                 settings.Report.IncludeSeenCount = true;
                 settings.TagPopulationEstimate = 32;
-                settings.HoldReportsOnDisconnect = true;
+                //settings.HoldReportsOnDisconnect = true;
 
                 settings.Keepalives.Enabled = true;
                 settings.Keepalives.PeriodInMs = 3000;

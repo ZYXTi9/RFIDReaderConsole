@@ -60,8 +60,8 @@
       <IsEnabled>true</IsEnabled>
       <PortNumber>1</PortNumber>
       <PortName>Antenna Port 1</PortName>
-      <TxPowerInDbm>10</TxPowerInDbm>
-      <RxSensitivityInDbm>-70</RxSensitivityInDbm>
+      <TxPowerInDbm>32.5</TxPowerInDbm>
+      <RxSensitivityInDbm>-80</RxSensitivityInDbm>
       <MaxRxSensitivity>false</MaxRxSensitivity>
       <MaxTxPower>false</MaxTxPower>
     </Antenna>
@@ -125,7 +125,7 @@
     <EnableLinkMonitorMode>true</EnableLinkMonitorMode>
     <LinkDownThreshold>5</LinkDownThreshold>
   </Keepalives>
-  <HoldReportsOnDisconnect>true</HoldReportsOnDisconnect>
+  <HoldReportsOnDisconnect>false</HoldReportsOnDisconnect>
   <TxFrequenciesInMhz />
   <SpatialConfig>
     <Mode>Inventory</Mode>
